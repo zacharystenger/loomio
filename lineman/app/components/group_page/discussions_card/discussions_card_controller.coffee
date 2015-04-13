@@ -1,4 +1,4 @@
-angular.module('loomioApp').controller 'DiscussionsCardController', ($scope, $modal, Records, DiscussionFormService, KeyEventService, LoadingService) ->
+angular.module('loomioApp').controller 'DiscussionsCardController', ($scope, $modal, Records, DiscussionFormService, KeyEventService, LoadingService, CurrentUser) ->
   $scope.loaded = 0
   $scope.perPage = 25
 
@@ -15,3 +15,17 @@ angular.module('loomioApp').controller 'DiscussionsCardController', ($scope, $mo
   $scope.openDiscussionForm = ->
     DiscussionFormService.openNewDiscussionModal($scope.group)
   KeyEventService.registerKeyEvent $scope, 'pressedT', $scope.openDiscussionForm
+
+  $scope.whyImEmpty = ->
+    if !$scope.group.hasDiscussions
+      'no_discussions_in_group'
+    else if $scope.group.discussionPrivacyOptions == 'private_only'
+      'discussions_are_private'
+    else
+      'no_public_discussions'
+
+  $scope.canGainAccess = ->
+    $scope.group.hasDiscussions and !CurrentUser.canSeePrivateContentFor($scope.group)
+
+  $scope.joinGroup = ->
+    # implement this, also convert to accessibility form

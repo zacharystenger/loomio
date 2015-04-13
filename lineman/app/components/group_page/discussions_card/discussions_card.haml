@@ -6,6 +6,15 @@
 
   #threads-card-title.card-title{ translate: 'group_page.discussions', role: 'heading' }
   .group-thread-list
+    .group-thread-list-empty{ng-if: '!loadMoreExecuting && group.organizationDiscussions().length == 0'}
+      .group-thread-list-empty-reason{translate: 'group_page.thread_list.empty.{{whyImEmpty()}}'}
+      .group-thread-list-empty-access{ng-if: 'canGainAccess()'}
+        %span{translate: 'group_page.thread_list.empty.request_membership'}
+        %a{translate: 'group_page.thread_list.empty.request_membership_link', href: '#', ng-click: 'joinGroup()'}
+      .group-thread-list-empty-invite-only{ng-if: '!canGainAccess()'}
+        .group-thread-list-members-invite{ng-if: 'group.membersCanInviteMembers', translate: 'group_page.thread_list.empty.membership_is_invitation_only'}
+        .group-thread-list-admins-invite{ng-if: '!group.membersCanInviteMembers', translate: 'group_page.thread_list.empty.membership_is_invitation_by_admin_only'}
+
     .group-thread-list-item{ng-repeat: 'discussion in group.organizationDiscussions() | orderBy: ["-lastActivityAt"] | limitTo:loaded'}
       .time-and-icon.pull-right
         %smart_time.group-thread-list-time{time: 'discussion.lastActivityAt' }>
@@ -19,4 +28,4 @@
     %loading{ng-show: 'loadMoreExecuting'}
 
     .discussions-show-more.card-minor-action
-      %a{ng-hide: 'loadMoreExecuting', ng-click: 'loadMore()', href: '#', translate: 'common.action.show_more'}
+      %a{ng-hide: 'loadMoreExecuting || !group.hasDiscussions', ng-click: 'loadMore()', href: '#', translate: 'common.action.show_more'}
