@@ -1,5 +1,4 @@
 class Comment < ActiveRecord::Base
-  include Twitter::Extractor
   include Translatable
 
   has_paper_trail
@@ -94,8 +93,11 @@ class Comment < ActiveRecord::Base
   end
 
   def mentioned_group_members
-    usernames = extract_mentioned_screen_names(self.body)
-    group.users.where(username: usernames).where('users.id != ?', author.id)
+    group.users.where(username: mentioned_usernames).where('users.id != ?', author.id)
+  end
+
+  def mentioned_usernames
+    body.scan(/\B\@([\w\-]+)/).flatten
   end
 
   def likes_count
