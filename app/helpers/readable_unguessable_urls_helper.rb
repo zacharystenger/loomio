@@ -5,36 +5,34 @@ module ReadableUnguessableUrlsHelper
                             'motion' => :name }
   MODELS_WITH_SLUGS.freeze
 
-  MODELS_WITH_SLUGS.keys.each do |model|
-    next if model == 'group'
-    model = model.to_s.downcase
+  def user_url(user, options = {})
+    options = options.merge(host: host).
+                      merge(port: port).
+                      merge(route_hash(user, 'user'))
 
-    define_method("#{model}_url", ->(instance, options={}) {
-      options = options.merge( host_and_port )
-                       .merge( route_hash(instance, model) )
+    url_for(options)
+  end
 
-      url_for(options)
-    })
+  def motion_url(motion, options = {})
+    options = options.merge(host: host_for_group(motion.group)).
+                      merge(port: port).
+                      merge(route_hash(motion, 'motion'))
 
-    define_method("#{model}_path", ->(instance, options={}) {
-      options = options.merge(only_path: true)
+    url_for(options)
+  end
 
-      self.send("#{model}_url", instance, options)
-    })
+  def discussion_url(discussion, options = {})
+    options = options.merge(host: host_for_group(discussion.group)).
+                      merge(port: port).
+                      merge(route_hash(discussion, 'discussion'))
 
+    url_for(options)
   end
 
   def group_url(group, options = {})
-    options = options.merge( host_and_port ).
-                      merge( route_hash(group, 'group') ).
-                      merge( default_url_options )
-
-    if group.has_subdomain?
-      options[:subdomain] = group.subdomain
-    elsif ENV['DEFAULT_SUBDOMAIN']
-      options[:subdomain] = ENV['DEFAULT_SUBDOMAIN']
-    end
-    
+    options = options.merge(host: host_for_group(group)).
+                      merge(port: port).
+                      merge(route_hash(group, 'group'))
 
     if group.has_subdomain? and not group.is_subgroup?
       uri = URI(url_for(options))
@@ -45,55 +43,54 @@ module ReadableUnguessableUrlsHelper
     end
   end
 
-  def host_needed_to_link_to?(group)
-    if request.blank?
-      true
-    elsif group.has_subdomain?
-      group.subdomain != request.subdomain
-    elsif ENV['DEFAULT_SUBDOMAIN'].present?
-      request.subdomain != ENV['DEFAULT_SUBDOMAIN']
-    else
-      request.subdomain.present?
-    end
-  end
-
-  def group_path(group, options = {})
-    url = group_url(group, options)
-    if host_needed_to_link_to?(group)
-      url
-    else
-      uri = URI(url)
-      if uri.query.present?
-        "#{uri.path}?#{uri.query}"
-      else
-        uri.path
-      end
-    end
+  MODELS_WITH_SLUGS.keys.each do |model|
+    define_method("#{model}_path", ->(instance, options={}) {
+      self.send("#{model}_url", instance, options)
+    })
   end
 
   private
 
-  def host_and_port
+  def host_for_group(group)
+    host(group.subdomain)
+  end
+
+  def host(subdomain = nil)
+    [subdomain || ENV['DEFAULT_SUBDOMAIN'], domain_and_tld].compact.join('.')
+  end
+
+  # for www.loomio.org this will return: loomio.org
+  def domain_and_tld
+    host = if request.present?
+      request.host
+    else
+      ActionMailer::Base.default_url_options[:host]
+    end
+    host.split('.').last(tld_length.to_i + 1).join('.')
+  end
+
+  def subdomain
+    request.subdomain
+  end
+
+  def tld_length
+    ENV['TLD_LENGTH'] || "1"
+  end
+
+  def port
     if request.present?
-      host = request.domain || request.host
-      if include_port?(request)
-        { host: host, port: request.port }
+      if using_default_port?
+        nil
       else
-        { host: host, port: nil }
+        request.port
       end
     else
-      ActionMailer::Base.default_url_options
+      ActionMailer::Base.default_url_options[:port]
     end
   end
 
-  def include_port?(request)
-    if    request.port == 80  && !request.ssl?
-      false
-    elsif request.port == 443 && request.ssl?
-      false
-    else
-      true
-    end
+  def using_default_port?
+    (request.port == 80  && !request.ssl?) or (request.port == 443 && request.ssl?)
   end
 
   def route_hash(instance, model)
@@ -103,5 +100,4 @@ module ReadableUnguessableUrlsHelper
 
     { controller: controller, action: 'show', id: instance.key, slug: slug }
   end
-
 end
