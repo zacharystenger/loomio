@@ -29,6 +29,42 @@ describe ReadableUnguessableUrlsHelper do
     let(:subdomain_group) { create :group, name: 'subdomain group', key: 'bbb222', subdomain: 'subdomain-group' }
     let(:subgroup_with_subdomain) { create :group, parent: subdomain_group, name: 'subgroup with subdomain', key: 'bbb223'}
 
+    context 'localhost' do
+      let(:canonical_host) { 'localhost:3000' }
+      let(:default_subdomain) { nil }
+      let(:tld_length) { '0' }
+
+      context "within an email" do
+        before { helper.stub(:request).and_return(nil) }
+
+        it "group without subdomain" do
+          expect(group_url(normal_group)).to eq 'http://localhost:3000/g/aaa111/normal-group'
+        end
+
+        it "group with subdomain" do
+          expect(group_url(subdomain_group)).to eq 'http://subdomain-group.localhost:3000/'
+        end
+
+        it "subgroup with subdomain" do
+          expect(group_url(subgroup_with_subdomain)).to eq 'http://subdomain-group.localhost:3000/g/bbb223/subdomain-group-subgroup-with-subdomain'
+        end
+      end
+
+      context "via a request" do
+        it "group without subdomain" do
+          expect(group_url(normal_group)).to eq 'http://localhost:3000/g/aaa111/normal-group'
+        end
+
+        it "group with subdomain" do
+          expect(group_url(subdomain_group)).to eq 'http://subdomain-group.localhost:3000/'
+        end
+
+        it "subgroup with subdomain" do
+          expect(group_url(subgroup_with_subdomain)).to eq 'http://subdomain-group.localhost:3000/g/bbb223/subdomain-group-subgroup-with-subdomain'
+        end
+      end
+    end
+
     context 'loom.io' do
       let(:canonical_host) { 'loom.io' }
       let(:default_subdomain) { nil }
